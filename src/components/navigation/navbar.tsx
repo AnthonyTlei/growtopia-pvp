@@ -1,5 +1,3 @@
-"use server";
-
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import AnimatedText from "../styled/animated-text";
@@ -7,6 +5,8 @@ import { Button } from "../ui/button";
 import Image from "next/image";
 
 import logo from "@/assets/logo/logo.png";
+import { ThemeToggler } from "../theming/theme-toggler";
+import UserButton from "../auth/user-button";
 
 export default async function Navbar() {
   return (
@@ -30,27 +30,20 @@ export default async function Navbar() {
         </Link>
         <div className="flex gap-4 justify-center items-center">
           <Link href={`/`}>
-            <span className="text-sm md:text-base font-light">Matches</span>
+            <span className="text-sm md:text-base font-light hover:text-primary/75">
+              Matches
+            </span>
           </Link>
           <Link href={`/`}>
-            <span className="text-sm md:text-base font-light">Leaderboard</span>
+            <span className="text-sm md:text-base font-light hover:text-primary/75">
+              Rankings
+            </span>
           </Link>
         </div>
-        <Link href={`/`}>
-          <Avatar className="size-10">
-            <AvatarImage src="https://github.com/shadcn.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-        </Link>
-        {/* TODO: Swap between Avatar/Login based on user auth */}
-        {/* <Link href={`/`}>
-          <Button
-            variant={"outline"}
-            className="text-primary text-sm border-primary"
-          >
-            Login
-          </Button>
-        </Link> */}
+        <div className="flex justify-center items-center gap-2">
+          <ThemeToggler />
+          <UserButton />
+        </div>
       </div>
     </nav>
   );
