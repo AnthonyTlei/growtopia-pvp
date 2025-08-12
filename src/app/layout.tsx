@@ -30,7 +30,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="w-full flex justify-center items-center flex-col p-0">
+          <div className="w-full flex justify-center items-center flex-col p-0 h-screen">
             <div className="flex w-full items-center justify-center md:mt-4">
               <Navbar />
             </div>
