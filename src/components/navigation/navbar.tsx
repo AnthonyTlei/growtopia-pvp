@@ -23,7 +23,7 @@ export default async function Navbar() {
             />
             <AnimatedText
               text="Growtopia PvP"
-              className="text-primary text-md font-semibold"
+              className="text-primary text-md font-semibold hidden md:flex"
               withParticles
             />
           </div>
@@ -37,7 +37,7 @@ export default async function Navbar() {
           </Link>
         </div>
         <Link href={`/`}>
-          <Avatar>
+          <Avatar className="size-10">
             <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
