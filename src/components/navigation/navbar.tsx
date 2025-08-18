@@ -29,7 +29,7 @@ export default async function Navbar() {
           </div>
         </Link>
         <div className="flex gap-4 justify-center items-center">
-          <Link href={`/`}>
+          <Link href={`/matches`}>
             <span className="text-sm md:text-base font-light hover:text-primary/75">
               Matches
             </span>

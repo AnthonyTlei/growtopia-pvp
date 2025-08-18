@@ -75,7 +75,7 @@ export default function MatchesList() {
               {isFetchingNextPage ? "Loading…" : "Load more"}
             </button>
           ) : (
-            <div className="text-sm opacity-70">You’ve reached the end.</div>
+            <div className="text-sm opacity-70">No more matches to show.</div>
           )}
         </div>
 
