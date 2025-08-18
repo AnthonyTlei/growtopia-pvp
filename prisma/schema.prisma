@@ -71,6 +71,8 @@ model User {
   emailVerified DateTime? @map("email_verified")
   image         String?
   role          Role      @default(USER)
+  ign           String?
+  acceptedTerms Boolean   @default(false) @map("accepted_terms")
 
   accounts Account[]
   sessions Session[]

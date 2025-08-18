@@ -3,6 +3,10 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theming/theme-provider";
 import Navbar from "@/components/navigation/navbar";
+import { getUser } from "@/lib/auth-utils";
+import TermsAndConditionsWrapper from "@/components/account-setup/terms-and-conditions-wrapper";
+import IgnPromptWrapper from "@/components/account-setup/ign-prompt-wrapper";
+import { Toaster } from "@/components/ui/sonner";
 
 const robotoSans = Roboto({
   weight: ["400", "500", "700"],
@@ -16,11 +20,12 @@ export const metadata: Metadata = {
     "Minimal app to track Growtopia PVP duels and match scores with an ELO system.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getUser();
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${robotoSans.variable} antialiased`}>
@@ -35,8 +40,11 @@ export default function RootLayout({
               <Navbar />
             </div>
             {children}
+            {user && !user.acceptedTerms && <TermsAndConditionsWrapper />}
+            {user && user.acceptedTerms && !user.ign && <IgnPromptWrapper />}
           </div>
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -7,6 +7,8 @@ declare module "next-auth" {
   interface User {
     id: string;
     role: Role;
+    ign?: string;
+    acceptedTerms: boolean;
   }
 
   interface Session {
@@ -16,6 +18,8 @@ declare module "next-auth" {
       email: string;
       image: string | null;
       role: Role;
+      ign?: string;
+      acceptedTerms: boolean;
     };
   }
 }
