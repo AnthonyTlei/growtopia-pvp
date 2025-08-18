@@ -1,13 +1,53 @@
 import kyInstance from "@/lib/ky";
+import { MatchesBatch } from "@/lib/matches";
 import { CreateMatchValues } from "@/lib/validation";
 import { MatchWithParticipants } from "@/types/prisma-includes";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  InfiniteData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { HTTPError } from "ky";
 import { toast } from "sonner";
 
-async function fetchMatches(): Promise<MatchWithParticipants[]> {
-  const url = "/api/matches";
-  return kyInstance.get(url).json();
+type Cursor = { id: string; createdAt: string } | null;
+
+type Params = {
+  limit?: number;
+  order?: "asc" | "desc";
+};
+
+export function useMatchesInfinite({
+  limit = 20,
+  order = "desc",
+}: Params = {}) {
+  return useInfiniteQuery<
+    MatchesBatch,
+    Error,
+    InfiniteData<MatchesBatch>,
+    [string, string, number, string],
+    Cursor
+  >({
+    queryKey: ["matches", "infinite", limit, order],
+    initialPageParam: null,
+    queryFn: async ({ pageParam }) => {
+      const searchParams: Record<string, string> = {
+        limit: String(limit),
+        order,
+      };
+      if (pageParam?.id) searchParams.cursorId = pageParam.id;
+
+      return kyInstance
+        .get("/api/matches", { searchParams })
+        .json<MatchesBatch>();
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNext ? lastPage.nextCursor : undefined,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
 }
 
 async function createMatchRequest(
@@ -18,44 +58,7 @@ async function createMatchRequest(
   fd.set("rated", String(values.rated ?? false));
   fd.set("participants", JSON.stringify(values.participants));
   if (values.winnerId) fd.set("winnerId", values.winnerId);
-  // return kyInstance.post("/api/matches/create", { body: fd }).json();
   return kyInstance.post("/api/matches/create", { json: values }).json();
-}
-
-export function useMatchesQuery(matchId?: string) {
-  const queryClient = useQueryClient();
-  return useQuery<MatchWithParticipants[]>({
-    queryKey: ["matches", matchId],
-    queryFn: async () => {
-      const cachedMatches = queryClient.getQueryData<MatchWithParticipants[]>([
-        "matches",
-        undefined,
-      ]);
-      if (matchId) {
-        if (cachedMatches) {
-          const foundStore = cachedMatches?.find(
-            (match) => match.id === matchId
-          );
-          if (foundStore) {
-            return [foundStore];
-          }
-        }
-        const matches = await fetchMatches();
-        return matches.filter((m) => m.id === matchId);
-      }
-
-      if (cachedMatches) {
-        return cachedMatches;
-      }
-
-      return fetchMatches();
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-  });
 }
 
 export function useCreateMatchMutation() {

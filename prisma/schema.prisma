@@ -121,4 +121,5 @@ model Match {
   status MatchStatus @default(PENDING)
 
   @@index([winnerId])
+  @@index([createdAt, id])
 }
