@@ -10,6 +10,7 @@ import type { MatchWithParticipants } from "@/types/prisma-includes";
 import { MatchStatus } from "@prisma/client";
 import { CheckCircle2, Clock3, Timer } from "lucide-react";
 import { previewEloOutcomesByNumbers, DEFAULT_ELO } from "@/lib/elo";
+import MatchActions from "./match-actions";
 
 interface MatchCardProps {
   match: MatchWithParticipants;
@@ -85,11 +86,19 @@ export default function MatchCard({ match, className }: MatchCardProps) {
               </Badge>
             )}
           </div>
+
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {whenIcon}
             <span>
               {whenLabel} {formatDate(when)}
             </span>
+
+            {/* Actions menu */}
+            <MatchActions
+              matchId={match.id}
+              createdById={match.createdById}
+              status={match.status}
+            />
           </div>
         </div>
       </CardHeader>
@@ -129,39 +138,41 @@ export default function MatchCard({ match, className }: MatchCardProps) {
         </div>
 
         {/* Elo rows */}
-        <div className="mt-3 grid grid-cols-5 items-center text-xs">
-          {/* P1 ELO display */}
-          <div className="col-start-1 flex items-center gap-2">
-            <EloBadge
-              current={p1Elo}
-              delta={isCompleted ? p1.eloDelta ?? null : null}
-              preview={
-                isPreview && p1Preview
-                  ? { win: p1Preview.win, lose: p1Preview.lose }
-                  : null
-              }
-              after={isCompleted ? p1.eloAfter ?? null : null}
-              align="left"
-            />
-          </div>
+        {match.rated && (
+          <div className="mt-3 grid grid-cols-5 items-center text-xs">
+            {/* P1 ELO display */}
+            <div className="col-start-1 flex items-center gap-2">
+              <EloBadge
+                current={p1Elo}
+                delta={isCompleted ? p1.eloDelta ?? null : null}
+                preview={
+                  isPreview && p1Preview
+                    ? { win: p1Preview.win, lose: p1Preview.lose }
+                    : null
+                }
+                after={isCompleted ? p1.eloAfter ?? null : null}
+                align="left"
+              />
+            </div>
 
-          <div className="col-span-3" />
+            <div className="col-span-3" />
 
-          {/* P2 ELO display */}
-          <div className="col-start-5 flex items-center gap-2 justify-end">
-            <EloBadge
-              current={p2Elo}
-              delta={isCompleted ? p2.eloDelta ?? null : null}
-              preview={
-                isPreview && p2Preview
-                  ? { win: p2Preview.win, lose: p2Preview.lose }
-                  : null
-              }
-              after={isCompleted ? p2.eloAfter ?? null : null}
-              align="right"
-            />
+            {/* P2 ELO display */}
+            <div className="col-start-5 flex items-center gap-2 justify-end">
+              <EloBadge
+                current={p2Elo}
+                delta={isCompleted ? p2.eloDelta ?? null : null}
+                preview={
+                  isPreview && p2Preview
+                    ? { win: p2Preview.win, lose: p2Preview.lose }
+                    : null
+                }
+                after={isCompleted ? p2.eloAfter ?? null : null}
+                align="right"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {isCompleted && winner && (
           <>

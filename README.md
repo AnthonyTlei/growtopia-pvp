@@ -14,10 +14,14 @@
 
 [X] Add ELO changes (up/down) next to participant names (color coded)
 
-### Safeguards
+### Safeguards and Actions
 
-[ ] a pending/in_progress match can be edited/deleted by the creator, but not a completed one (admin only)
-[ ] a match cannot be created if the participants have a pending OR an in_progress matches on-going (for elo calculations)
+[X] a pending/in_progress match can be edited/deleted by the creator, but not a completed one (admin only) (UI)
+[X] a match cannot be created if the participants have a pending OR an in_progress matches on-going (for elo calculations)
+[ ] Edit match if creator & not completed OR if admin
+[ ] Cancel match if creator & not completed OR if admin
+[ ] Delete match if admin
+[ ] Share Match
 
 ### Reports + context menu introduction
 
@@ -25,7 +29,7 @@
 
 [ ] Add CRUD for Reports
 
-[ ] Add context menu (right-click) on match with Report option + comment
+[ ] Report action
 
 ### Admin features
 
