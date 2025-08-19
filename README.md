@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TODO
 
-## Getting Started
+\*\* Match enhancements
+[] Track creator of a match (for banning purposes)
 
-First, run the development server:
+\*\* ELO
+[] Create ELO algorithm
+[] Set elo on User db
+[] On match Completed, update ELO
+[] Add ELO changes (up/down) next to participant names (color coded)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+\*\* Reports + context menu introduction
+[] Create Report model
+[] Add CRUD for Reports
+[] Add context menu (right-click) on match with Report option + comment
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+\*\* Admin features
+[] Add admin page
+[] View reports
+[] Add Delete/Edit context options on matches
+[] Ban users (Perma = deletes all the user's matches + elo resets for ev1)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+\*\* Rankings
+[] Create a chessbase style like table of rankings with latest elo changes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+\*\* Comments
+[] Add "Open comments" under each match
+[] Pops in (instagram style)
+[] Paginated + infinite load comments
 
-## Learn More
+\*\* Annoucements
+[] Add annoucements db table
+[] Add annoucements page
+[] Provide admins a way to create/edit/delete annoucements
 
-To learn more about Next.js, take a look at the following resources:
+\*\* Home page
+[] Recent annoucements
+[] Recent matches
+[] Recent ELO changes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+\*\* Socials
+[] Profile pages for players
+[] Sharing profiles/matches to socials
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+\*\* Guilds
+[] Allow admins to create/edit/delete guilds
+[] Allow players to join a guild (shows on their profiles)
