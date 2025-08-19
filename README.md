@@ -71,3 +71,5 @@
 [ ] Allow admins to create/edit/delete guilds
 
 [ ] Allow players to join a guild (shows on their profiles)
+
+cerph in
