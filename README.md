@@ -17,11 +17,17 @@
 ### Safeguards and Actions
 
 [X] a pending/in_progress match can be edited/deleted by the creator, but not a completed one (admin only) (UI)
+
 [X] a match cannot be created if the participants have a pending OR an in_progress matches on-going (for elo calculations)
+
 [X] Remove IN PROGRESS state
+
 [ ] Edit match if creator & not completed OR if admin
+
 [ ] Cancel match if creator & not completed OR if admin
+
 [ ] Delete match if admin
+
 [ ] Share Match
 
 ### Reports + context menu introduction
@@ -81,5 +87,3 @@
 [ ] Allow admins to create/edit/delete guilds
 
 [ ] Allow players to join a guild (shows on their profiles)
-
-cerph in
