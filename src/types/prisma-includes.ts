@@ -8,6 +8,8 @@ export const matchesWithParticipants = {
           id: true,
           ign: true,
           image: true,
+          elo: true,
+          ratedMatchesCount: true,
         },
       },
     },

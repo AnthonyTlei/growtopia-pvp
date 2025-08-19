@@ -6,13 +6,18 @@
 
 ### ELO
 
-[ ] Create ELO algorithm
+[X] Create ELO algorithm
 
-[ ] Set elo on User db
+[X] Set elo on User db
 
-[ ] On match Completed, update ELO
+[X] On match Completed, update ELO
 
-[ ] Add ELO changes (up/down) next to participant names (color coded)
+[X] Add ELO changes (up/down) next to participant names (color coded)
+
+### Safeguards
+
+[ ] a pending/in_progress match can be edited/deleted by the creator, but not a completed one (admin only)
+[ ] a match cannot be created if the participants have a pending OR an in_progress matches on-going (for elo calculations)
 
 ### Reports + context menu introduction
 

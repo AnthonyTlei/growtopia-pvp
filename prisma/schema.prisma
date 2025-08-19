@@ -80,6 +80,9 @@ model User {
   ign           String?
   acceptedTerms Boolean   @default(false) @map("accepted_terms")
 
+  elo               Int @default(1200)
+  ratedMatchesCount Int @default(0)
+
   accounts Account[]
   sessions Session[]
 
@@ -91,7 +94,7 @@ model User {
 }
 
 // ========================================
-// MATCH MODELS
+// MATCH PARTICIPANT
 // ========================================
 model MatchParticipant {
   match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
@@ -101,11 +104,18 @@ model MatchParticipant {
 
   score Int @default(0)
 
+  eloBefore Int?
+  eloAfter  Int?
+  eloDelta  Int?
+
   @@id([matchId, userId])
   @@index([userId])
   @@index([matchId])
 }
 
+// ========================================
+// MATCH
+// ========================================
 model Match {
   id String @id @default(cuid())
 
@@ -123,6 +133,9 @@ model Match {
   completedAt DateTime? @db.Timestamptz(3)
 
   status MatchStatus @default(PENDING)
+
+  ratingAppliedAt  DateTime?
+  ratingRevertedAt DateTime?
 
   @@index([winnerId])
   @@index([createdAt, id])

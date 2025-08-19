@@ -4,6 +4,7 @@ import {
 } from "@/types/prisma-includes";
 import { prisma } from "./prisma";
 import { CreateMatchValues } from "./validation";
+import { applyElo, computeDelta, DEFAULT_ELO, getK, MIN_ELO } from "./elo";
 
 export type MatchesBatch = {
   items: MatchWithParticipants[];
@@ -14,11 +15,27 @@ export type MatchesBatch = {
 type GetMatchesInfiniteArgs = {
   cursorId?: string;
   limit?: number; // default 20, max 100
-  order?: "asc" | "desc"; // default "desc" (newest first)
+  order?: "asc" | "desc";
 };
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 20;
+
+function outcomesFromScores(
+  aScore: number,
+  bScore: number,
+  winnerId?: string | null,
+  aUserId?: string,
+  bUserId?: string
+): [0 | 0.5 | 1, 0 | 0.5 | 1] {
+  if (winnerId && aUserId && bUserId) {
+    if (winnerId === aUserId) return [1, 0];
+    if (winnerId === bUserId) return [0, 1];
+  }
+  if (aScore > bScore) return [1, 0];
+  if (aScore < bScore) return [0, 1];
+  return [0.5, 0.5];
+}
 
 /**
  * Infinite, cursor-based listing. O(1) per page (no OFFSET).
@@ -36,15 +53,15 @@ export async function getMatchesInfinite({
       : [{ createdAt: "desc" as const }, { id: "desc" as const }];
 
   const items = await prisma.match.findMany({
-    take: safeLimit + 1, // fetch one extra to detect "hasNext"
-    skip: cursorId ? 1 : 0, // skip the cursor row itself
-    cursor: cursorId ? { id: cursorId } : undefined, // cursor must be unique
+    take: safeLimit + 1,
+    skip: cursorId ? 1 : 0,
+    cursor: cursorId ? { id: cursorId } : undefined,
     orderBy,
     include: matchesWithParticipants,
   });
 
   const hasNext = items.length > safeLimit;
-  if (hasNext) items.pop(); // remove the lookahead record
+  if (hasNext) items.pop();
 
   const last = items[items.length - 1];
   const nextCursor =
@@ -55,6 +72,10 @@ export async function getMatchesInfinite({
   return { items, nextCursor, hasNext };
 }
 
+/**
+ * Create Match function + ELO handling
+ *
+ */
 export async function createMatch(
   values: CreateMatchValues,
   creatorId?: string
@@ -74,13 +95,23 @@ export async function createMatch(
 
     const match = await prisma.$transaction(async (tx) => {
       const userIds = participants.map((p) => p.userId);
+
       const users = await tx.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true },
+        select: { id: true, elo: true, ratedMatchesCount: true },
       });
       if (users.length !== userIds.length) {
         throw new Error("One or more players do not exist.");
       }
+      const byId = new Map(
+        users.map((u) => [
+          u.id,
+          {
+            elo: u.elo ?? DEFAULT_ELO,
+            ratedMatchesCount: u.ratedMatchesCount ?? 0,
+          },
+        ])
+      );
 
       let creatorExists = false;
       if (creatorId) {
@@ -96,13 +127,10 @@ export async function createMatch(
           status,
           rated,
           ...(completedAt ? { completedAt } : {}),
-
           ...(winnerId ? { winner: { connect: { id: winnerId } } } : {}),
-
           ...(creatorId && creatorExists
             ? { createdBy: { connect: { id: creatorId } } }
             : {}),
-
           participants: {
             create: participants.map((p) => ({
               user: { connect: { id: p.userId } },
@@ -111,12 +139,54 @@ export async function createMatch(
           },
         },
         include: {
-          ...matchesWithParticipants,
+          participants: {
+            select: { matchId: true, userId: true, score: true },
+            orderBy: { userId: "asc" },
+          },
+          winner: { select: { id: true } },
         },
+      });
+
+      const [pA, pB] = created.participants;
+
+      const aUser = byId.get(pA.userId);
+      const bUser = byId.get(pB.userId);
+      if (!aUser || !bUser) {
+        throw new Error("Unexpected: missing user stats for Elo preview.");
+      }
+
+      const [Sa, Sb] = outcomesFromScores(
+        pA.score ?? 0,
+        pB.score ?? 0,
+        created.winner?.id ?? undefined,
+        pA.userId,
+        pB.userId
+      );
+
+      const Ka = getK(aUser.ratedMatchesCount, aUser.elo);
+      const Kb = getK(bUser.ratedMatchesCount, bUser.elo);
+
+      const dA = computeDelta(aUser.elo, bUser.elo, Sa, Ka);
+      const dB = computeDelta(bUser.elo, aUser.elo, Sb, Kb);
+
+      const aPreview = Math.max(MIN_ELO, aUser.elo + dA);
+      const bPreview = Math.max(MIN_ELO, bUser.elo + dB);
+
+      await tx.matchParticipant.update({
+        where: { matchId_userId: { matchId: created.id, userId: pA.userId } },
+        data: { eloBefore: aUser.elo, eloAfter: aPreview, eloDelta: dA },
+      });
+      await tx.matchParticipant.update({
+        where: { matchId_userId: { matchId: created.id, userId: pB.userId } },
+        data: { eloBefore: bUser.elo, eloAfter: bPreview, eloDelta: dB },
       });
 
       return created;
     });
+
+    if (rated && status === "COMPLETED") {
+      await applyElo({ matchId: match.id });
+    }
 
     return match;
   } catch (err) {

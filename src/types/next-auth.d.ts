@@ -9,6 +9,8 @@ declare module "next-auth" {
     role: Role;
     ign?: string;
     acceptedTerms: boolean;
+    elo: number;
+    ratedMatchesCount: number;
   }
 
   interface Session {
@@ -20,6 +22,8 @@ declare module "next-auth" {
       role: Role;
       ign?: string;
       acceptedTerms: boolean;
+      elo: number;
+      ratedMatchesCount: number;
     };
   }
 }

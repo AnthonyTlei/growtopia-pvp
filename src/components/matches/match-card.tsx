@@ -1,12 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -14,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { MatchWithParticipants } from "@/types/prisma-includes";
 import { MatchStatus } from "@prisma/client";
 import { CheckCircle2, Clock3, Timer } from "lucide-react";
+import { previewEloOutcomesByNumbers, DEFAULT_ELO } from "@/lib/elo";
 
 interface MatchCardProps {
   match: MatchWithParticipants;
@@ -22,7 +18,6 @@ interface MatchCardProps {
 
 export default function MatchCard({ match, className }: MatchCardProps) {
   const participants = match.participants ?? [];
-
   if (participants.length !== 2) {
     return (
       <Card className={cn("rounded-2xl", className)}>
@@ -42,26 +37,18 @@ export default function MatchCard({ match, className }: MatchCardProps) {
 
   const [p1, p2] = participants;
 
-  // Winner/loser resolution
+  // Winner/loser
   const winner =
     (match.winnerId && participants.find((p) => p.userId === match.winnerId)) ||
-    // Fallback: higher score (in case winnerId missing but completed)
     (p1.score === p2.score ? undefined : p1.score > p2.score ? p1 : p2);
-
-  const loser =
-    (winner && participants.find((p) => p.userId !== winner.userId)) ||
-    undefined;
-
   const statusBadge = <StatusBadge status={match.status} />;
 
   const when =
     match.status === MatchStatus.COMPLETED
       ? match.completedAt ?? match.createdAt
       : match.createdAt;
-
   const whenLabel =
     match.status === MatchStatus.COMPLETED ? "Completed" : "Created";
-
   const whenIcon =
     match.status === MatchStatus.COMPLETED ? (
       <CheckCircle2 className="h-4 w-4" />
@@ -70,6 +57,21 @@ export default function MatchCard({ match, className }: MatchCardProps) {
     ) : (
       <Clock3 className="h-4 w-4" />
     );
+
+  const isCompleted = match.status === MatchStatus.COMPLETED;
+  const isPreview = match.rated && !isCompleted;
+
+  const p1Elo = p1.user?.elo ?? DEFAULT_ELO;
+  const p2Elo = p2.user?.elo ?? DEFAULT_ELO;
+  const p1Count = p1.user?.ratedMatchesCount ?? 0;
+  const p2Count = p2.user?.ratedMatchesCount ?? 0;
+
+  const preview = isPreview
+    ? previewEloOutcomesByNumbers(p1Elo, p1Count, p2Elo, p2Count)
+    : null;
+
+  const p1Preview = preview?.A;
+  const p2Preview = preview?.B;
 
   return (
     <Card className={cn("rounded-2xl", className)}>
@@ -83,7 +85,6 @@ export default function MatchCard({ match, className }: MatchCardProps) {
               </Badge>
             )}
           </div>
-
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {whenIcon}
             <span>
@@ -127,7 +128,42 @@ export default function MatchCard({ match, className }: MatchCardProps) {
           />
         </div>
 
-        {match.status === MatchStatus.COMPLETED && winner && loser && (
+        {/* Elo rows */}
+        <div className="mt-3 grid grid-cols-5 items-center text-xs">
+          {/* P1 ELO display */}
+          <div className="col-start-1 flex items-center gap-2">
+            <EloBadge
+              current={p1Elo}
+              delta={isCompleted ? p1.eloDelta ?? null : null}
+              preview={
+                isPreview && p1Preview
+                  ? { win: p1Preview.win, lose: p1Preview.lose }
+                  : null
+              }
+              after={isCompleted ? p1.eloAfter ?? null : null}
+              align="left"
+            />
+          </div>
+
+          <div className="col-span-3" />
+
+          {/* P2 ELO display */}
+          <div className="col-start-5 flex items-center gap-2 justify-end">
+            <EloBadge
+              current={p2Elo}
+              delta={isCompleted ? p2.eloDelta ?? null : null}
+              preview={
+                isPreview && p2Preview
+                  ? { win: p2Preview.win, lose: p2Preview.lose }
+                  : null
+              }
+              after={isCompleted ? p2.eloAfter ?? null : null}
+              align="right"
+            />
+          </div>
+        </div>
+
+        {isCompleted && winner && (
           <>
             <Separator className="my-3" />
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -139,13 +175,6 @@ export default function MatchCard({ match, className }: MatchCardProps) {
           </>
         )}
       </CardContent>
-
-      {/* Optional footer: show IDs or extra meta */}
-      {/* <CardFooter className="py-3 text-xs text-muted-foreground">
-        <div className="w-full flex items-center justify-between">
-          <span>Match ID: {match.id}</span>
-        </div>
-      </CardFooter> */}
     </Card>
   );
 }
@@ -196,7 +225,6 @@ function PlayerCell({
   highlight?: boolean;
 }) {
   const initials = (ign ?? "?").slice(0, 2).toUpperCase();
-
   return (
     <div
       className={cn(
@@ -210,7 +238,6 @@ function PlayerCell({
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       )}
-
       <div
         className={cn(
           "text-sm",
@@ -219,7 +246,6 @@ function PlayerCell({
       >
         {ign ?? "Unknown"}
       </div>
-
       {align === "right" && (
         <Avatar className="h-7 w-7">
           <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
@@ -239,6 +265,53 @@ function ScorePill({ value, winner }: { value: number; winner?: boolean }) {
       )}
     >
       {value}
+    </div>
+  );
+}
+
+function EloBadge({
+  current,
+  delta,
+  preview,
+  after,
+  align = "left",
+}: {
+  current: number;
+  delta: number | null;
+  preview: { win: number; lose: number } | null;
+  after: number | null;
+  align?: "left" | "right";
+}) {
+  const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2",
+        align === "right" && "justify-end"
+      )}
+    >
+      {/* current elo */}
+      <span className="font-medium tabular-nums">{current}</span>
+
+      {/* completed: show actual delta and new elo */}
+      {after !== null && delta !== null ? (
+        <>
+          <span
+            className={cn(
+              "tabular-nums",
+              delta >= 0 ? "text-emerald-600" : "text-rose-600"
+            )}
+          >
+            {sign(delta)}
+          </span>
+          <span className="text-muted-foreground">→</span>
+          <span className="font-medium tabular-nums">{after}</span>
+        </>
+      ) : preview ? (
+        <span className="tabular-nums text-muted-foreground">
+          {sign(preview.win)} / {preview.lose}
+        </span>
+      ) : null}
     </div>
   );
 }
