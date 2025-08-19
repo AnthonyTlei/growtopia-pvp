@@ -52,8 +52,6 @@ export default function MatchCard({ match, className }: MatchCardProps) {
     match.status === MatchStatus.COMPLETED ? "Completed" : "Created";
   const whenIcon =
     match.status === MatchStatus.COMPLETED ? (
-      <CheckCircle2 className="h-4 w-4" />
-    ) : match.status === MatchStatus.IN_PROGRESS ? (
       <Timer className="h-4 w-4" />
     ) : (
       <Clock3 className="h-4 w-4" />
@@ -201,12 +199,6 @@ function StatusBadge({ status }: { status: MatchStatus }) {
           className="uppercase border-yellow-500/40 text-yellow-600"
         >
           Pending
-        </Badge>
-      );
-    case MatchStatus.IN_PROGRESS:
-      return (
-        <Badge className="uppercase bg-blue-600 text-white hover:bg-blue-600">
-          In Progress
         </Badge>
       );
     case MatchStatus.COMPLETED:

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MatchStatusEnum = z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]);
+export const MatchStatusEnum = z.enum(["PENDING", "COMPLETED"]);
 
 const participantSchema = z.object({
   userId: z.cuid("Invalid user id"),

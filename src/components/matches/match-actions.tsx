@@ -30,7 +30,7 @@ export default function MatchActions({ matchId, createdById, status }: Props) {
 
   const isAdmin = user?.role === "ADMIN" || user?.role === "OWNER";
   const isCreator = !!user?.id && !!createdById && user.id === createdById;
-  const isActive = status === "PENDING" || status === "IN_PROGRESS";
+  const isActive = status === "PENDING";
 
   const canEdit = isActive && (isCreator || isAdmin);
   const canCancel = isActive && (isCreator || isAdmin);

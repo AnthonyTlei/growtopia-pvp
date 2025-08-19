@@ -119,7 +119,7 @@ export async function createMatch(
         const existing = await tx.match.findFirst({
           where: {
             rated: true,
-            status: { in: ["PENDING", "IN_PROGRESS"] },
+            status: { in: ["PENDING"] },
             AND: [
               { participants: { some: { userId: a } } },
               { participants: { some: { userId: b } } },

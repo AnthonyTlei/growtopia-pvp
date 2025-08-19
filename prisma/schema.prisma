@@ -21,7 +21,6 @@ enum Role {
 
 enum MatchStatus {
   PENDING
-  IN_PROGRESS
   COMPLETED
 }
 
