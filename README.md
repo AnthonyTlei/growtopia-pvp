@@ -22,11 +22,11 @@
 
 [X] Remove IN PROGRESS state
 
-[ ] Edit match if creator & not completed OR if admin
+[X] Edit match if creator & not completed OR if admin
 
-[ ] Cancel match if creator & not completed OR if admin
-
-[ ] Delete match if admin
+[ ] Delete match if creator & not completed OR if admin
+[ ] Handle ELO reverting and updating of PENDING matches of affected players
+[ ] How to handle if the deleted match has COMPLETED successors?
 
 [ ] Share Match
 
