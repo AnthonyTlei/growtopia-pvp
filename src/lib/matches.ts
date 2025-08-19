@@ -55,7 +55,10 @@ export async function getMatchesInfinite({
   return { items, nextCursor, hasNext };
 }
 
-export async function createMatch(values: CreateMatchValues) {
+export async function createMatch(
+  values: CreateMatchValues,
+  creatorId?: string
+) {
   try {
     const { status, rated = false, participants, winnerId } = values;
 
@@ -75,23 +78,41 @@ export async function createMatch(values: CreateMatchValues) {
         where: { id: { in: userIds } },
         select: { id: true },
       });
-      if (users.length !== userIds.length)
+      if (users.length !== userIds.length) {
         throw new Error("One or more players do not exist.");
+      }
+
+      let creatorExists = false;
+      if (creatorId) {
+        const creator = await tx.user.findUnique({
+          where: { id: creatorId },
+          select: { id: true },
+        });
+        creatorExists = !!creator;
+      }
 
       const created = await tx.match.create({
         data: {
           status,
           rated,
-          ...(winnerId ? { winnerId } : {}),
           ...(completedAt ? { completedAt } : {}),
+
+          ...(winnerId ? { winner: { connect: { id: winnerId } } } : {}),
+
+          ...(creatorId && creatorExists
+            ? { createdBy: { connect: { id: creatorId } } }
+            : {}),
+
           participants: {
             create: participants.map((p) => ({
-              userId: p.userId,
+              user: { connect: { id: p.userId } },
               score: p.score ?? 0,
             })),
           },
         },
-        include: matchesWithParticipants,
+        include: {
+          ...matchesWithParticipants,
+        },
       });
 
       return created;

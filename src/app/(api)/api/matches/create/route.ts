@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const match = await createMatch(values);
+    const match = await createMatch(values, user.id);
     return NextResponse.json(match, { status: 201 });
   } catch (error) {
     console.error("POST /api/matches/create failed:", error);

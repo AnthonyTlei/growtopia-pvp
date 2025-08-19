@@ -83,8 +83,9 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  matches    MatchParticipant[]
-  matchesWon Match[]            @relation("MatchWinner")
+  matches        MatchParticipant[]
+  matchesWon     Match[]            @relation("MatchWinner")
+  createdMatches Match[]            @relation("MatchCreator")
 
   @@map("users")
 }
@@ -107,6 +108,9 @@ model MatchParticipant {
 
 model Match {
   id String @id @default(cuid())
+
+  createdBy   User?   @relation("MatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
 
   participants MatchParticipant[]
 

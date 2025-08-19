@@ -12,6 +12,15 @@ export const matchesWithParticipants = {
       },
     },
   },
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      ign: true,
+      image: true,
+    },
+  },
 } satisfies Prisma.MatchInclude;
 
 // Types
