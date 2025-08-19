@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import CreateMatchDialog from "./create-match-dialog";
+import CreateMatchDialog from "./create-edit-match-dialog";
 
 export default function CreateMatchFAB() {
   const [showCreateMatchDialog, setShowCreateMatchDialog] = useState(false);

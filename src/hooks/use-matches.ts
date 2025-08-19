@@ -49,6 +49,48 @@ function pushIntoInfiniteCaches(
   }
 }
 
+/** Replace an updated match across all pages in every infinite cache */
+function replaceInInfiniteCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  updated: MatchWithParticipants
+) {
+  const matches = queryClient.getQueriesData<InfiniteData<MatchesBatch>>({
+    queryKey: ["matches", "infinite"],
+  });
+
+  for (const [key, data] of matches) {
+    if (!data || !data.pages) continue;
+
+    const pages = data.pages.map((p) => ({
+      ...p,
+      items: p.items.map((m) => (m.id === updated.id ? updated : m)),
+    }));
+
+    queryClient.setQueryData<InfiniteData<MatchesBatch>>(key, {
+      ...data,
+      pages,
+    });
+  }
+}
+
+/** Normalize HTTP errors into Error(message) for toasts */
+async function normalizeHttpError(err: unknown): Promise<Error> {
+  if (err instanceof HTTPError) {
+    let message = `${err.response.status} ${err.response.statusText}`;
+    try {
+      const data = (await err.response.clone().json()) as { message?: string };
+      if (data?.message) message = data.message;
+    } catch {
+      try {
+        const txt = await err.response.text();
+        if (txt) message = txt;
+      } catch {}
+    }
+    return new Error(message);
+  }
+  return err instanceof Error ? err : new Error("Request failed");
+}
+
 export function useMatchesInfinite({
   limit = 20,
   order = "desc",
@@ -90,25 +132,11 @@ async function createMatchRequest(
       .post("/api/matches/create", { json: values })
       .json<MatchWithParticipants>();
   } catch (err) {
-    if (err instanceof HTTPError) {
-      let message = `${err.response.status} ${err.response.statusText}`;
-      try {
-        const data = (await err.response.clone().json()) as {
-          message?: string;
-        };
-        if (data?.message) message = data.message;
-      } catch {
-        try {
-          const txt = await err.response.text();
-          if (txt) message = txt;
-        } catch {}
-      }
-      throw new Error(message);
-    }
-    throw err;
+    throw await normalizeHttpError(err);
   }
 }
 
+/** --- Hook: CREATE mutation with cache updates --- */
 export function useCreateMatchMutation() {
   const queryClient = useQueryClient();
 
@@ -138,13 +166,65 @@ export function useCreateMatchMutation() {
       toast.success("Match created");
     },
 
-    onError: (error: unknown) => {
-      if (error instanceof Error && error.message) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to create match");
-      }
+    onError: async (error: unknown) => {
+      const e = await normalizeHttpError(error);
+      toast.error(e.message);
       console.error("createMatch mutation failed:", error);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["matches", "infinite"] });
+    },
+  });
+}
+
+/** --- API call: EDIT --- */
+async function editMatchRequest(args: {
+  id: string;
+  data: CreateMatchValues;
+}): Promise<MatchWithParticipants> {
+  try {
+    return await kyInstance
+      .patch(`/api/matches/${args.id}`, { json: args.data })
+      .json<MatchWithParticipants>();
+  } catch (err) {
+    throw await normalizeHttpError(err);
+  }
+}
+
+/** --- Hook: EDIT mutation with cache updates --- */
+export function useEditMatchMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: editMatchRequest,
+
+    onSuccess: (updated) => {
+      replaceInInfiniteCaches(queryClient, updated);
+
+      queryClient.setQueryData<MatchWithParticipants>(
+        ["matches", updated.id],
+        updated
+      );
+
+      const simple = queryClient.getQueryData<MatchWithParticipants[]>([
+        "matches",
+        undefined,
+      ]);
+      if (simple) {
+        queryClient.setQueryData<MatchWithParticipants[]>(
+          ["matches", undefined],
+          simple.map((m) => (m.id === updated.id ? updated : m))
+        );
+      }
+
+      toast.success("Match updated");
+    },
+
+    onError: async (error) => {
+      const e = await normalizeHttpError(error);
+      toast.error(e.message);
+      console.error("editMatch mutation failed:", error);
     },
 
     onSettled: () => {

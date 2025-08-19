@@ -26,31 +26,34 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCreateMatchMutation } from "@/hooks/use-matches";
 import {
   createMatchSchema,
   MatchStatusEnum,
   type CreateMatchValues,
 } from "@/lib/validation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import PlayerSearch from "../utilities/player-search";
+import {
+  useCreateMatchMutation,
+  useEditMatchMutation,
+} from "@/hooks/use-matches";
+import type { MatchWithParticipants } from "@/types/prisma-includes";
 
-interface CreateMatchDialogProps {
+type Mode = "create" | "edit";
+
+interface CreateEditMatchDialogProps {
   open: boolean;
   onClose: () => void;
+  mode?: Mode; // default "create"
+  /** Required in edit mode to prefill and provide id */
+  initialMatch?: MatchWithParticipants;
 }
 
-export default function CreateMatchDialog({
-  open,
-  onClose,
-}: CreateMatchDialogProps) {
-  const mutation = useCreateMatchMutation();
-
-  const form = useForm<CreateMatchValues>({
-    resolver: zodResolver(createMatchSchema),
-    defaultValues: {
+function toFormValues(match?: MatchWithParticipants): CreateMatchValues {
+  if (!match) {
+    return {
       status: "PENDING",
       rated: false,
       participants: [
@@ -58,11 +61,47 @@ export default function CreateMatchDialog({
         { userId: "", score: 0 },
       ],
       winnerId: undefined,
-    },
+    };
+  }
+  const [p1, p2] =
+    match.participants.length === 2
+      ? match.participants
+      : [
+          { userId: "", score: 0 },
+          { userId: "", score: 0 },
+        ];
+
+  return {
+    status: match.status,
+    rated: !!match.rated,
+    participants: [
+      { userId: p1.userId ?? "", score: p1.score ?? 0 },
+      { userId: p2.userId ?? "", score: p2.score ?? 0 },
+    ],
+    winnerId: match.winnerId ?? undefined,
+  };
+}
+
+export default function CreateEditMatchDialog({
+  open,
+  onClose,
+  mode = "create",
+  initialMatch,
+}: CreateEditMatchDialogProps) {
+  const createMutation = useCreateMatchMutation();
+  const editMutation = useEditMatchMutation();
+
+  const form = useForm<CreateMatchValues>({
+    resolver: zodResolver(createMatchSchema),
+    defaultValues: toFormValues(initialMatch),
     mode: "onSubmit",
   });
 
   const { control, watch, handleSubmit, reset, formState, setValue } = form;
+
+  useEffect(() => {
+    if (open) reset(toFormValues(initialMatch));
+  }, [open, initialMatch?.id]);
 
   const status = watch("status");
 
@@ -71,24 +110,47 @@ export default function CreateMatchDialog({
     name: "participants",
   });
 
-  const isSubmitting = mutation.isPending || formState.isSubmitting;
+  const isSubmitting =
+    formState.isSubmitting ||
+    createMutation.isPending ||
+    editMutation.isPending;
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && !isSubmitting) onClose();
   }
 
-  async function onSubmit(values: CreateMatchValues) {
+  const onSubmit = async (values: CreateMatchValues) => {
     try {
-      await mutation.mutateAsync(values);
+      if (mode === "create") {
+        await createMutation.mutateAsync(values);
+      } else {
+        if (!initialMatch?.id) {
+          throw new Error("Missing match id for edit.");
+        }
+        await editMutation.mutateAsync({ id: initialMatch.id, data: values });
+      }
       reset();
       onClose();
     } catch (err) {
-      console.error("Create match failed:", err);
+      console.error(`${mode} match failed:`, err);
     }
-  }
+  };
 
   const showWinner = useMemo(() => status === "COMPLETED", [status]);
   const showScore = useMemo(() => status !== "PENDING", [status]);
+
+  const title = mode === "edit" ? "Edit Match" : "Create a Match";
+  const description =
+    mode === "edit"
+      ? "Update match details and scores."
+      : "Set a new match or record a completed one.";
+  const cta = isSubmitting
+    ? mode === "edit"
+      ? "Saving..."
+      : "Creating..."
+    : mode === "edit"
+    ? "Save changes"
+    : "Create Match";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -97,10 +159,8 @@ export default function CreateMatchDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Create a Match</DialogTitle>
-          <DialogDescription>
-            Set a new match or record a completed one.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -173,7 +233,7 @@ export default function CreateMatchDialog({
                         <FormLabel>Player {idx + 1}</FormLabel>
                         <FormControl>
                           <PlayerSearch
-                            value={field.value ?? ""} // keep it controlled
+                            value={field.value ?? ""}
                             disabled={isSubmitting}
                             excludeIds={
                               fields
@@ -235,11 +295,9 @@ export default function CreateMatchDialog({
                 control={control}
                 name="winnerId"
                 render={({ field }) => {
-                  const participantIds = [
-                    watch("participants.0.userId"),
-                    watch("participants.1.userId"),
-                  ].filter(Boolean) as string[];
-
+                  const p1 = watch("participants.0.userId");
+                  const p2 = watch("participants.1.userId");
+                  const participantIds = [p1, p2].filter(Boolean) as string[];
                   const disabledWinner =
                     isSubmitting || participantIds.length < 2;
 
@@ -249,7 +307,7 @@ export default function CreateMatchDialog({
                       <FormControl>
                         <Select
                           disabled={disabledWinner}
-                          value={field.value ?? ""} // "" shows placeholder
+                          value={field.value ?? ""}
                           onValueChange={(v) => field.onChange(v)}
                         >
                           <SelectTrigger>
@@ -287,7 +345,7 @@ export default function CreateMatchDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Match"}
+                {cta}
               </Button>
             </DialogFooter>
           </form>

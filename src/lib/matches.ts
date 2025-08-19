@@ -5,6 +5,7 @@ import {
 import { prisma } from "./prisma";
 import { CreateMatchValues } from "./validation";
 import { applyElo, computeDelta, DEFAULT_ELO, getK, MIN_ELO } from "./elo";
+import { MatchStatus, Prisma, Role } from "@prisma/client";
 
 export type MatchesBatch = {
   items: MatchWithParticipants[];
@@ -21,6 +22,8 @@ type GetMatchesInfiniteArgs = {
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 20;
 
+type DbClient = Prisma.TransactionClient | typeof prisma;
+
 function outcomesFromScores(
   aScore: number,
   bScore: number,
@@ -35,6 +38,41 @@ function outcomesFromScores(
   if (aScore > bScore) return [1, 0];
   if (aScore < bScore) return [0, 1];
   return [0.5, 0.5];
+}
+
+/** Guard: no other rated active (pending/in-progress) match between the same pair */
+async function assertNoDuplicateActiveRated(
+  tx: DbClient,
+  {
+    excludeMatchId,
+    a,
+    b,
+  }: {
+    excludeMatchId?: string;
+    a: string;
+    b: string;
+  }
+) {
+  const [u1, u2] = [a, b].sort();
+  const conflict = await tx.match.findFirst({
+    where: {
+      id: excludeMatchId ? { not: excludeMatchId } : undefined,
+      rated: true,
+      status: { in: [MatchStatus.PENDING] },
+      AND: [
+        { participants: { some: { userId: u1 } } },
+        { participants: { some: { userId: u2 } } },
+        { participants: { every: { userId: { in: [u1, u2] } } } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (conflict) {
+    throw new Error(
+      "There’s already a rated match pending between these two players. Finish or cancel it before creating another."
+    );
+  }
 }
 
 /**
@@ -96,7 +134,6 @@ export async function createMatch(
     const match = await prisma.$transaction(async (tx) => {
       const userIds = participants.map((p) => p.userId);
 
-      // Validate players exist + fetch their elo & counts for preview calc
       const users = await tx.user.findMany({
         where: { id: { in: userIds } },
         select: { id: true, elo: true, ratedMatchesCount: true },
@@ -115,25 +152,10 @@ export async function createMatch(
       );
 
       if (rated) {
-        const [a, b] = [...new Set(userIds)].sort();
-        const existing = await tx.match.findFirst({
-          where: {
-            rated: true,
-            status: { in: ["PENDING"] },
-            AND: [
-              { participants: { some: { userId: a } } },
-              { participants: { some: { userId: b } } },
-              { participants: { every: { userId: { in: [a, b] } } } },
-            ],
-          },
-          select: { id: true },
+        await assertNoDuplicateActiveRated(tx, {
+          a: userIds[0],
+          b: userIds[1],
         });
-
-        if (existing) {
-          throw new Error(
-            "There’s already a rated match pending between these two players. Finish or cancel it before creating another."
-          );
-        }
       }
 
       let creatorExists = false;
@@ -211,12 +233,171 @@ export async function createMatch(
       await applyElo({ matchId: match.id });
     }
 
-    return match;
+    const full = await prisma.match.findUnique({
+      where: { id: match.id },
+      include: matchesWithParticipants,
+    });
+    if (!full) throw new Error("Match not found after creation.");
+    return full;
   } catch (err) {
     console.error("createMatch failed:", err);
     if (err instanceof Error && err.message) {
       throw err;
     }
     throw new Error("Failed to create match. Please try again.");
+  }
+}
+
+export async function updateMatch(args: {
+  id: string;
+  values: CreateMatchValues;
+  actorId: string;
+  actorRole: Role;
+}): Promise<MatchWithParticipants> {
+  const { id, values, actorId, actorRole } = args;
+
+  try {
+    const { status, rated = false, participants, winnerId } = values;
+
+    if (!participants || participants.length !== 2) {
+      throw new Error("A match must include exactly two participants.");
+    }
+    const ids = participants.map((p) => p.userId);
+    if (winnerId && !ids.includes(winnerId)) {
+      throw new Error("Winner must be one of the participants.");
+    }
+
+    const existing = await prisma.match.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        rated: true,
+        createdById: true,
+      },
+    });
+    if (!existing) throw new Error("Match not found.");
+
+    const isAdmin = actorRole === Role.ADMIN || actorRole === Role.OWNER;
+    const isCreator = existing.createdById && existing.createdById === actorId;
+
+    if (!isAdmin) {
+      if (!isCreator) {
+        throw new Error(
+          "Forbidden: only the match creator can edit this match."
+        );
+      }
+      if (existing.status !== MatchStatus.PENDING) {
+        throw new Error("Only pending matches can be edited.");
+      }
+    }
+
+    const willBeActive = status === MatchStatus.PENDING;
+
+    if (rated && willBeActive) {
+      await prisma.$transaction(async (tx) => {
+        await assertNoDuplicateActiveRated(tx, {
+          excludeMatchId: id,
+          a: ids[0],
+          b: ids[1],
+        });
+      });
+    }
+
+    const completedAt = status === MatchStatus.COMPLETED ? new Date() : null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const users = await tx.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, elo: true, ratedMatchesCount: true },
+      });
+      if (users.length !== ids.length) {
+        throw new Error("One or more players do not exist.");
+      }
+      const byId = new Map(
+        users.map((u) => [
+          u.id,
+          {
+            elo: u.elo ?? DEFAULT_ELO,
+            ratedMatchesCount: u.ratedMatchesCount ?? 0,
+          },
+        ])
+      );
+
+      await tx.match.update({
+        where: { id },
+        data: {
+          status,
+          rated,
+          completedAt,
+          ...(winnerId
+            ? { winner: { connect: { id: winnerId } } }
+            : { winner: { disconnect: true } }),
+        },
+      });
+
+      await tx.matchParticipant.deleteMany({ where: { matchId: id } });
+      await tx.matchParticipant.createMany({
+        data: participants.map((p) => ({
+          matchId: id,
+          userId: p.userId,
+          score: p.score ?? 0,
+        })),
+      });
+
+      const [pa, pb] = participants
+        .map((p) => ({
+          id: p.userId,
+          score: p.score ?? 0,
+          stats: byId.get(p.userId)!,
+        }))
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
+
+      const [Sa, Sb] = outcomesFromScores(
+        pa.score,
+        pb.score,
+        winnerId ?? undefined,
+        pa.id,
+        pb.id
+      );
+
+      const Ka = getK(pa.stats.ratedMatchesCount, pa.stats.elo);
+      const Kb = getK(pb.stats.ratedMatchesCount, pb.stats.elo);
+
+      const dA = computeDelta(pa.stats.elo, pb.stats.elo, Sa, Ka);
+      const dB = computeDelta(pb.stats.elo, pa.stats.elo, Sb, Kb);
+
+      const aPreview = Math.max(MIN_ELO, pa.stats.elo + dA);
+      const bPreview = Math.max(MIN_ELO, pb.stats.elo + dB);
+
+      await tx.matchParticipant.update({
+        where: { matchId_userId: { matchId: id, userId: pa.id } },
+        data: { eloBefore: pa.stats.elo, eloAfter: aPreview, eloDelta: dA },
+      });
+      await tx.matchParticipant.update({
+        where: { matchId_userId: { matchId: id, userId: pb.id } },
+        data: { eloBefore: pb.stats.elo, eloAfter: bPreview, eloDelta: dB },
+      });
+
+      return tx.match.findUnique({
+        where: { id },
+        include: matchesWithParticipants,
+      });
+    });
+
+    if (rated && status === MatchStatus.COMPLETED) {
+      await applyElo({ matchId: id });
+    }
+
+    const full = await prisma.match.findUnique({
+      where: { id },
+      include: matchesWithParticipants,
+    });
+    if (!full) throw new Error("Match not found after update.");
+    return full;
+  } catch (err) {
+    console.error("updateMatch failed:", err);
+    if (err instanceof Error && err.message) throw err;
+    throw new Error("Failed to update match. Please try again.");
   }
 }

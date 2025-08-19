@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { MatchWithParticipants } from "@/types/prisma-includes";
 import { MatchStatus } from "@prisma/client";
-import { CheckCircle2, Clock3, Timer } from "lucide-react";
+import { Clock3, Timer } from "lucide-react";
 import { previewEloOutcomesByNumbers, DEFAULT_ELO } from "@/lib/elo";
 import MatchActions from "./match-actions";
 
@@ -96,6 +96,7 @@ export default function MatchCard({ match, className }: MatchCardProps) {
               matchId={match.id}
               createdById={match.createdById}
               status={match.status}
+              initialMatch={match}
             />
           </div>
         </div>

@@ -16,14 +16,22 @@ import ky from "@/lib/ky";
 import { MoreVertical, Pencil, Share2, XCircle, Trash2 } from "lucide-react";
 import type { MatchStatus } from "@prisma/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import type { MatchWithParticipants } from "@/types/prisma-includes";
+import CreateEditMatchDialog from "./create-edit-match-dialog";
 
 type Props = {
   matchId: string;
   createdById?: string | null;
   status: MatchStatus;
+  initialMatch?: MatchWithParticipants;
 };
 
-export default function MatchActions({ matchId, createdById, status }: Props) {
+export default function MatchActions({
+  matchId,
+  createdById,
+  status,
+  initialMatch,
+}: Props) {
   const router = useRouter();
   const { data } = useCurrentUser();
   const user = data?.user;
@@ -37,8 +45,12 @@ export default function MatchActions({ matchId, createdById, status }: Props) {
   const canDelete = !!isAdmin;
   const canShare = true;
 
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [openEdit, setOpenEdit] = React.useState(false);
+
   const onEdit = () => {
-    router.push(`/matches/${matchId}/edit`);
+    setMenuOpen(false);
+    setOpenEdit(true);
   };
 
   const onCancel = async () => {
@@ -77,52 +89,64 @@ export default function MatchActions({ matchId, createdById, status }: Props) {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="More">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
+    <>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="More">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
-        {canEdit && (
-          <DropdownMenuItem onClick={onEdit}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-        )}
-
-        {canCancel && (
-          <DropdownMenuItem onClick={onCancel}>
-            <XCircle className="mr-2 h-4 w-4" />
-            Cancel
-          </DropdownMenuItem>
-        )}
-
-        {(canEdit || canCancel) && <DropdownMenuSeparator />}
-
-        {canShare && (
-          <DropdownMenuItem onClick={onShare}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Share
-          </DropdownMenuItem>
-        )}
-
-        {canDelete && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-700"
-              onClick={onDelete}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+          {canEdit && (
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
             </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          )}
+
+          {canCancel && (
+            <DropdownMenuItem onClick={onCancel}>
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancel
+            </DropdownMenuItem>
+          )}
+
+          {(canEdit || canCancel) && <DropdownMenuSeparator />}
+
+          {canShare && (
+            <DropdownMenuItem onClick={onShare}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </DropdownMenuItem>
+          )}
+
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-700"
+                onClick={onDelete}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Create/Edit Dialog in edit mode */}
+      {canEdit && initialMatch && (
+        <CreateEditMatchDialog
+          open={openEdit}
+          onClose={() => setOpenEdit(false)}
+          mode="edit"
+          initialMatch={initialMatch}
+        />
+      )}
+    </>
   );
 }
