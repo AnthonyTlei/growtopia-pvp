@@ -38,7 +38,6 @@ export default function MatchCard({ match, className }: MatchCardProps) {
 
   const [p1, p2] = participants;
 
-  // Winner/loser
   const winner =
     (match.winnerId && participants.find((p) => p.userId === match.winnerId)) ||
     (p1.score === p2.score ? undefined : p1.score > p2.score ? p1 : p2);
@@ -60,22 +59,38 @@ export default function MatchCard({ match, className }: MatchCardProps) {
   const isCompleted = match.status === MatchStatus.COMPLETED;
   const isPreview = match.rated && !isCompleted;
 
-  const p1Elo = p1.user?.elo ?? DEFAULT_ELO;
-  const p2Elo = p2.user?.elo ?? DEFAULT_ELO;
+  const p1Before = isCompleted
+    ? p1.eloBefore ?? DEFAULT_ELO
+    : p1.user?.elo ?? DEFAULT_ELO;
+  const p2Before = isCompleted
+    ? p2.eloBefore ?? DEFAULT_ELO
+    : p2.user?.elo ?? DEFAULT_ELO;
+
+  const p1After = isCompleted ? p1.eloAfter ?? null : null;
+  const p2After = isCompleted ? p2.eloAfter ?? null : null;
+
+  const p1Delta = isCompleted ? p1.eloDelta ?? null : null;
+  const p2Delta = isCompleted ? p2.eloDelta ?? null : null;
+
+  const p1EloLive = p1.user?.elo ?? DEFAULT_ELO;
+  const p2EloLive = p2.user?.elo ?? DEFAULT_ELO;
   const p1Count = p1.user?.ratedMatchesCount ?? 0;
   const p2Count = p2.user?.ratedMatchesCount ?? 0;
 
   const preview = isPreview
-    ? previewEloOutcomesByNumbers(p1Elo, p1Count, p2Elo, p2Count)
+    ? previewEloOutcomesByNumbers(p1EloLive, p1Count, p2EloLive, p2Count)
     : null;
 
-  const p1Preview = preview?.A;
-  const p2Preview = preview?.B;
+  const p1Preview = preview?.A ?? null;
+  const p2Preview = preview?.B ?? null;
 
   return (
     <Card className={cn("rounded-2xl", className)}>
-      <CardHeader className="py-3">
-        <div className="flex items-center justify-between gap-2">
+      <CardHeader className="py-2 sm:py-3">
+        {" "}
+        {/* ⬅ xs tighter */}
+        {/* XS: two rows; SM+: single row */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             {statusBadge}
             {match.rated && (
@@ -85,13 +100,15 @@ export default function MatchCard({ match, className }: MatchCardProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {whenIcon}
-            <span>
-              {whenLabel} {formatDate(when)}
-            </span>
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 sm:gap-2">
+              {whenIcon}
+              <span className="truncate">
+                {whenLabel} {formatDate(when)}
+              </span>
+            </div>
 
-            {/* Actions menu */}
+            {/* Actions on far right even on XS */}
             <MatchActions
               matchId={match.id}
               createdById={match.createdById}
@@ -102,81 +119,111 @@ export default function MatchCard({ match, className }: MatchCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="py-3">
-        <div className="grid grid-cols-5 items-center gap-3">
+      <CardContent className="py-2 sm:py-3">
+        {" "}
+        {/* ⬅ xs tighter */}
+        {/* Players + score */}
+        <div className="grid grid-cols-3 sm:grid-cols-5 items-center gap-2 sm:gap-3">
+          {" "}
+          {/* ⬅ xs 3 cols */}
           {/* Player 1 */}
           <PlayerCell
             ign={p1.user?.ign}
             image={p1.user?.image}
             highlight={winner?.userId === p1.userId}
             align="left"
+            size="xs" /* ⬅ smaller on mobile */
           />
-
           {/* Score */}
-          <div className="col-span-3">
-            <div className="flex items-center justify-center gap-2">
+          <div className="col-span-1 sm:col-span-3">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
               <ScorePill
                 value={p1.score}
                 winner={winner?.userId === p1.userId}
               />
-              <span className="text-sm text-muted-foreground">—</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                —
+              </span>
               <ScorePill
                 value={p2.score}
                 winner={winner?.userId === p2.userId}
               />
             </div>
           </div>
-
           {/* Player 2 */}
           <PlayerCell
             ign={p2.user?.ign}
             image={p2.user?.image}
             highlight={winner?.userId === p2.userId}
             align="right"
+            size="xs" /* ⬅ smaller on mobile */
           />
         </div>
-
         {/* Elo rows */}
         {match.rated && (
-          <div className="mt-3 grid grid-cols-5 items-center text-xs">
-            {/* P1 ELO display */}
-            <div className="col-start-1 flex items-center gap-2">
-              <EloBadge
-                current={p1Elo}
-                delta={isCompleted ? p1.eloDelta ?? null : null}
-                preview={
-                  isPreview && p1Preview
-                    ? { win: p1Preview.win, lose: p1Preview.lose }
-                    : null
-                }
-                after={isCompleted ? p1.eloAfter ?? null : null}
-                align="left"
-              />
+          <>
+            {/* SM+ grid (unchanged structure, but pass *before* / *delta* / *after*) */}
+            <div className="mt-2 sm:mt-3 hidden sm:grid grid-cols-5 items-center text-xs">
+              <div className="col-start-1 flex items-center gap-2">
+                <EloBadge
+                  current={p1Before}
+                  delta={p1Delta}
+                  after={p1After}
+                  preview={
+                    isPreview && p1Preview
+                      ? { win: p1Preview.win, lose: p1Preview.lose }
+                      : null
+                  }
+                  align="left"
+                />
+              </div>
+              <div className="col-span-3" />
+              <div className="col-start-5 flex items-center gap-2 justify-end">
+                <EloBadge
+                  current={p2Before}
+                  delta={p2Delta}
+                  after={p2After}
+                  preview={
+                    isPreview && p2Preview
+                      ? { win: p2Preview.win, lose: p2Preview.lose }
+                      : null
+                  }
+                  align="right"
+                />
+              </div>
             </div>
 
-            <div className="col-span-3" />
-
-            {/* P2 ELO display */}
-            <div className="col-start-5 flex items-center gap-2 justify-end">
-              <EloBadge
-                current={p2Elo}
-                delta={isCompleted ? p2.eloDelta ?? null : null}
-                preview={
-                  isPreview && p2Preview
-                    ? { win: p2Preview.win, lose: p2Preview.lose }
-                    : null
-                }
-                after={isCompleted ? p2.eloAfter ?? null : null}
-                align="right"
-              />
+            {/* XS compact: use a 3-col grid so numbers align perfectly */}
+            <div className="mt-2 sm:hidden space-y-1 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="opacity-70">Elo</span>
+                <EloBadge
+                  compact
+                  current={p1Before}
+                  delta={p1Delta}
+                  after={p1After}
+                  preview={isPreview ? p1Preview : null}
+                  align="right"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="opacity-0 select-none">Elo</span>
+                <EloBadge
+                  compact
+                  current={p2Before}
+                  delta={p2Delta}
+                  after={p2After}
+                  preview={isPreview ? p2Preview : null}
+                  align="right"
+                />
+              </div>
             </div>
-          </div>
+          </>
         )}
-
         {isCompleted && winner && (
           <>
-            <Separator className="my-3" />
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Separator className="my-2 sm:my-3" />
+            <div className="flex items-center justify-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
               <span>Winner:</span>
               <span className="font-medium text-foreground">
                 {winner.user?.ign ?? shortId(winner.userId)}
@@ -222,38 +269,45 @@ function PlayerCell({
   image,
   align = "left",
   highlight,
+  size = "md", // ⬅ new
 }: {
   ign?: string | null;
   image?: string | null;
   align?: "left" | "right";
   highlight?: boolean;
+  size?: "xs" | "md";
 }) {
   const initials = (ign ?? "?").slice(0, 2).toUpperCase();
+  const avatarSize = size === "xs" ? "h-6 w-6" : "h-7 w-7"; // ⬅ xs smaller
+  const nameCls = size === "xs" ? "text-[13px]" : "text-sm"; // ⬅ xs smaller
+
   return (
     <div
       className={cn(
-        "flex items-center gap-2",
+        "flex items-center gap-1.5 sm:gap-2", // ⬅ tighter on xs
         align === "right" && "justify-end text-right"
       )}
     >
       {align === "left" && (
-        <Avatar className="h-7 w-7">
+        <Avatar className={avatarSize}>
           <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
-          <AvatarFallback>{initials}</AvatarFallback>
+          <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
         </Avatar>
       )}
       <div
         className={cn(
-          "text-sm",
+          nameCls,
+          "truncate max-w-[7.5rem] sm:max-w-none", // ⬅ prevent overflow on xs
           highlight ? "font-semibold" : "text-muted-foreground"
         )}
+        title={ign ?? undefined}
       >
         {ign ?? "Unknown"}
       </div>
       {align === "right" && (
-        <Avatar className="h-7 w-7">
+        <Avatar className={avatarSize}>
           <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
-          <AvatarFallback>{initials}</AvatarFallback>
+          <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
         </Avatar>
       )}
     </div>
@@ -264,7 +318,7 @@ function ScorePill({ value, winner }: { value: number; winner?: boolean }) {
   return (
     <div
       className={cn(
-        "min-w-10 px-3 py-1 rounded-full text-center text-sm",
+        "min-w-9 sm:min-w-10 px-2.5 sm:px-3 py-1 rounded-full text-center text-[13px] sm:text-sm", // ⬅ xs tighter
         winner ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
       )}
     >
@@ -273,46 +327,95 @@ function ScorePill({ value, winner }: { value: number; winner?: boolean }) {
   );
 }
 
+// --- EloBadge
 function EloBadge({
   current,
   delta,
   preview,
   after,
   align = "left",
+  compact = false,
 }: {
   current: number;
   delta: number | null;
   preview: { win: number; lose: number } | null;
   after: number | null;
   align?: "left" | "right";
+  compact?: boolean;
 }) {
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+
+  if (compact) {
+    const isResult = after !== null && delta !== null;
+
+    const cols = isResult
+      ? "grid-cols-[4ch_min-content_min-content_4ch]"
+      : "grid-cols-[4ch_min-content]";
+
+    return (
+      <div
+        className={cn(
+          "grid items-baseline tabular-nums gap-0.5 leading-none",
+          cols,
+          align === "right" ? "justify-items-end" : "justify-items-start"
+        )}
+      >
+        {/* before */}
+        <span className="font-medium">{current}</span>
+
+        {/* delta or preview */}
+        {isResult ? (
+          <>
+            <span
+              className={cn(delta >= 0 ? "text-emerald-600" : "text-rose-600")}
+            >
+              {delta >= 0 ? `+${delta}` : `${delta}`}
+            </span>
+            <span className="text-muted-foreground pl-1">→</span>
+          </>
+        ) : preview ? (
+          <span className="text-muted-foreground">
+            {(preview.win >= 0 ? `+${preview.win}` : `${preview.win}`) +
+              "/" +
+              (preview.lose >= 0 ? `+${preview.lose}` : `${preview.lose}`)}
+          </span>
+        ) : isResult ? (
+          <span />
+        ) : null}
+
+        {/* after (only for completed) */}
+        {isResult ? <span className="font-medium">{after}</span> : null}
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
-        "flex items-center gap-2",
+        "flex items-center gap-1.5 sm:gap-2",
         align === "right" && "justify-end"
       )}
     >
-      {/* current elo */}
-      <span className="font-medium tabular-nums">{current}</span>
+      <span className="font-medium tabular-nums text-[13px] sm:text-sm">
+        {current}
+      </span>
 
-      {/* completed: show actual delta and new elo */}
       {after !== null && delta !== null ? (
         <>
           <span
             className={cn(
-              "tabular-nums",
+              "tabular-nums text-[13px] sm:text-sm",
               delta >= 0 ? "text-emerald-600" : "text-rose-600"
             )}
           >
             {sign(delta)}
           </span>
-          <span className="text-muted-foreground">→</span>
-          <span className="font-medium tabular-nums">{after}</span>
+          <span className="text-muted-foreground hidden sm:inline">→</span>
+          <span className="font-medium tabular-nums text-[13px] sm:text-sm">
+            {after}
+          </span>
         </>
       ) : preview ? (
-        <span className="tabular-nums text-muted-foreground">
+        <span className="tabular-nums text-[13px] sm:text-sm text-muted-foreground">
           {sign(preview.win)} / {preview.lose}
         </span>
       ) : null}
