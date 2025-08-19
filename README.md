@@ -2,7 +2,7 @@
 
 ### Match enhancements
 
-[ ] Track creator of a match (for banning purposes)
+[X] Track creator of a match (for banning purposes)
 
 ### ELO
 
