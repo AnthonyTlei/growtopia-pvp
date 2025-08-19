@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { getUser } from "@/lib/auth-utils";
 import { createMatchSchema, type CreateMatchValues } from "@/lib/validation";
 import { updateMatch } from "@/lib/matches";
+import { deleteMatch } from "@/lib/matches";
 
 type RouteContext = { params: { id: string } };
 
@@ -33,6 +34,34 @@ export async function PATCH(req: Request, { params }: RouteContext) {
         { status: 400 }
       );
     }
+
+    if (error instanceof Error) {
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(_req: Request, { params }: RouteContext) {
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const result = await deleteMatch({
+      id: params.id,
+      actorId: user.id,
+      actorRole: user.role,
+    });
+
+    return NextResponse.json({ id: result.id }, { status: 200 });
+  } catch (error) {
+    console.error("DELETE /api/matches/[id] failed:", error);
 
     if (error instanceof Error) {
       return NextResponse.json({ message: error.message }, { status: 400 });

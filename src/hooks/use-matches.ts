@@ -232,3 +232,96 @@ export function useEditMatchMutation() {
     },
   });
 }
+
+/** --- utils: remove `id` from all infinite caches --- */
+function removeFromInfiniteCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string
+) {
+  const matches = queryClient.getQueriesData<InfiniteData<MatchesBatch>>({
+    queryKey: ["matches", "infinite"],
+  });
+
+  for (const [key, data] of matches) {
+    if (!data || !data.pages) continue;
+
+    const pages = data.pages.map((p) => ({
+      ...p,
+      items: p.items.filter((m) => m.id !== id),
+    }));
+
+    queryClient.setQueryData<InfiniteData<MatchesBatch>>(key, {
+      ...data,
+      pages,
+    });
+  }
+}
+
+/** --- API call: DELETE/CANCEL --- */
+async function deleteMatchRequest(id: string): Promise<{ id: string }> {
+  try {
+    return await kyInstance.delete(`/api/matches/${id}`).json<{ id: string }>();
+  } catch (err) {
+    throw await normalizeHttpError(err);
+  }
+}
+
+/** --- Hook: DELETE/CANCEL mutation with cache updates --- */
+export function useDeleteMatchMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteMatchRequest,
+
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["matches", "infinite"] });
+
+      const previous = queryClient.getQueriesData<InfiniteData<MatchesBatch>>({
+        queryKey: ["matches", "infinite"],
+      });
+
+      removeFromInfiniteCaches(queryClient, id);
+
+      queryClient.removeQueries({ queryKey: ["matches", id] });
+
+      const simpleKey: readonly [string, undefined] = ["matches", undefined];
+      const simplePrev =
+        queryClient.getQueryData<MatchWithParticipants[]>(simpleKey);
+      if (simplePrev) {
+        queryClient.setQueryData<MatchWithParticipants[]>(
+          simpleKey,
+          simplePrev.filter((m) => m.id !== id)
+        );
+      }
+
+      return { previous, simplePrev };
+    },
+
+    onSuccess: (_res, id) => {
+      toast.success("Match removed");
+      queryClient.invalidateQueries({ queryKey: ["matches", "infinite"] });
+    },
+
+    onError: async (error, id, context) => {
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      if (context?.simplePrev) {
+        queryClient.setQueryData<MatchWithParticipants[]>(
+          ["matches", undefined],
+          context.simplePrev
+        );
+      }
+
+      const e = await normalizeHttpError(error);
+      toast.error(e.message);
+      console.error("deleteMatch mutation failed:", error);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["matches", "infinite"] });
+    },
+  });
+}

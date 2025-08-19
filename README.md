@@ -24,9 +24,13 @@
 
 [X] Edit match if creator & not completed OR if admin
 
-[ ] Delete match if creator & not completed OR if admin
-[ ] Handle ELO reverting and updating of PENDING matches of affected players
-[ ] How to handle if the deleted match has COMPLETED successors?
+[X] Delete match if creator & not completed OR if admin
+
+[X] Handle ELO reverting and updating of PENDING matches of affected players
+
+[X] How to handle if the deleted match has COMPLETED successors?
+
+[X] Cancel match (if PENDING and creator)
 
 [ ] Share Match
 

@@ -4,7 +4,14 @@ import {
 } from "@/types/prisma-includes";
 import { prisma } from "./prisma";
 import { CreateMatchValues } from "./validation";
-import { applyElo, computeDelta, DEFAULT_ELO, getK, MIN_ELO } from "./elo";
+import {
+  applyElo,
+  computeDelta,
+  DEFAULT_ELO,
+  getK,
+  MIN_ELO,
+  revertElo,
+} from "./elo";
 import { MatchStatus, Prisma, Role } from "@prisma/client";
 
 export type MatchesBatch = {
@@ -248,6 +255,10 @@ export async function createMatch(
   }
 }
 
+/**
+ * Update Match function + ELO handling
+ *
+ */
 export async function updateMatch(args: {
   id: string;
   values: CreateMatchValues;
@@ -400,4 +411,51 @@ export async function updateMatch(args: {
     if (err instanceof Error && err.message) throw err;
     throw new Error("Failed to update match. Please try again.");
   }
+}
+
+export async function deleteMatch(args: {
+  id: string;
+  actorId: string;
+  actorRole: Role;
+}): Promise<{ id: string }> {
+  const { id, actorId, actorRole } = args;
+
+  const isElevated = actorRole === Role.ADMIN || actorRole === Role.OWNER;
+
+  const match = await prisma.match.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      rated: true,
+      createdById: true,
+      ratingAppliedAt: true,
+      ratingRevertedAt: true,
+    },
+  });
+
+  if (!match) {
+    throw new Error("Match not found.");
+  }
+
+  if (match.status === MatchStatus.PENDING) {
+    const isCreator = !!match.createdById && match.createdById === actorId;
+    if (!isCreator && !isElevated) {
+      throw new Error(
+        "Only the creator or an admin can delete a pending match."
+      );
+    }
+  } else if (match.status === MatchStatus.COMPLETED) {
+    if (!isElevated) {
+      throw new Error("Only an admin can delete a completed match.");
+    }
+  }
+
+  if (match.status === MatchStatus.COMPLETED && match.rated) {
+    await revertElo({ matchId: match.id });
+  }
+
+  await prisma.match.delete({ where: { id: match.id } });
+
+  return { id: match.id };
 }

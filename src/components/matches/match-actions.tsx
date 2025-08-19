@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,12 +11,13 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import ky from "@/lib/ky";
 import { MoreVertical, Pencil, Share2, XCircle, Trash2 } from "lucide-react";
 import type { MatchStatus } from "@prisma/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { MatchWithParticipants } from "@/types/prisma-includes";
 import CreateEditMatchDialog from "./create-edit-match-dialog";
+import { useDeleteMatchMutation } from "@/hooks/use-matches";
+import MatchCancelDeleteDialog from "./match-cancel-delete-dialog";
 
 type Props = {
   matchId: string;
@@ -32,7 +32,6 @@ export default function MatchActions({
   status,
   initialMatch,
 }: Props) {
-  const router = useRouter();
   const { data } = useCurrentUser();
   const user = data?.user;
 
@@ -48,32 +47,42 @@ export default function MatchActions({
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [openEdit, setOpenEdit] = React.useState(false);
 
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmMode, setConfirmMode] = React.useState<"cancel" | "delete">(
+    "cancel"
+  );
+
+  const deleteMutation = useDeleteMatchMutation();
+
   const onEdit = () => {
     setMenuOpen(false);
     setOpenEdit(true);
   };
 
-  const onCancel = async () => {
-    try {
-      await ky.post(`/api/matches/${matchId}/cancel`);
-      toast.success("Match cancelled");
-      router.refresh();
-    } catch (e) {
-      toast.error("Failed to cancel match");
-      console.error(e);
-    }
+  const openCancel = () => {
+    setMenuOpen(false);
+    setConfirmMode("cancel");
+    setConfirmOpen(true);
   };
 
-  const onDelete = async () => {
-    if (!confirm("Delete this match? This cannot be undone.")) return;
-    try {
-      await ky.delete(`/api/matches/${matchId}`);
-      toast.success("Match deleted");
-      router.refresh();
-    } catch (e) {
-      toast.error("Failed to delete match");
-      console.error(e);
-    }
+  const openDelete = () => {
+    setMenuOpen(false);
+    setConfirmMode("delete");
+    setConfirmOpen(true);
+  };
+
+  const onConfirm = () => {
+    deleteMutation.mutate(matchId, {
+      onSuccess: () => {
+        toast.success(
+          confirmMode === "cancel" ? "Match cancelled" : "Match deleted"
+        );
+        setConfirmOpen(false);
+      },
+      onError: (e) => {
+        toast.error(e instanceof Error ? e.message : "Failed");
+      },
+    });
   };
 
   const onShare = async () => {
@@ -92,7 +101,12 @@ export default function MatchActions({
     <>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="More">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="More"
+            disabled={deleteMutation.isPending}
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -108,7 +122,7 @@ export default function MatchActions({
           )}
 
           {canCancel && (
-            <DropdownMenuItem onClick={onCancel}>
+            <DropdownMenuItem onClick={openCancel}>
               <XCircle className="mr-2 h-4 w-4" />
               Cancel
             </DropdownMenuItem>
@@ -128,17 +142,17 @@ export default function MatchActions({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-700"
-                onClick={onDelete}
+                onClick={openDelete}
+                disabled={deleteMutation.isPending}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Create/Edit Dialog in edit mode */}
       {canEdit && initialMatch && (
         <CreateEditMatchDialog
           open={openEdit}
@@ -147,6 +161,15 @@ export default function MatchActions({
           initialMatch={initialMatch}
         />
       )}
+
+      {/* Shared confirmation dialog for Cancel/Delete */}
+      <MatchCancelDeleteDialog
+        open={confirmOpen}
+        mode={confirmMode}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={onConfirm}
+        isLoading={deleteMutation.isPending}
+      />
     </>
   );
 }
