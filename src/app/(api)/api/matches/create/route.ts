@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { createMatch } from "@/lib/matches";
 import { createMatchSchema } from "@/lib/validation";
+import { ZodError } from "zod";
 
 export async function POST(req: Request) {
   const user = await getUser();
@@ -28,6 +29,18 @@ export async function POST(req: Request) {
     return NextResponse.json(match, { status: 201 });
   } catch (error) {
     console.error("POST /api/matches/create failed:", error);
+
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { message: "Invalid request", issues: error.issues },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error) {
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
+
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

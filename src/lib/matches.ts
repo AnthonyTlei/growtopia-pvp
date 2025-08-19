@@ -96,6 +96,7 @@ export async function createMatch(
     const match = await prisma.$transaction(async (tx) => {
       const userIds = participants.map((p) => p.userId);
 
+      // Validate players exist + fetch their elo & counts for preview calc
       const users = await tx.user.findMany({
         where: { id: { in: userIds } },
         select: { id: true, elo: true, ratedMatchesCount: true },
@@ -112,6 +113,28 @@ export async function createMatch(
           },
         ])
       );
+
+      if (rated) {
+        const [a, b] = [...new Set(userIds)].sort();
+        const existing = await tx.match.findFirst({
+          where: {
+            rated: true,
+            status: { in: ["PENDING", "IN_PROGRESS"] },
+            AND: [
+              { participants: { some: { userId: a } } },
+              { participants: { some: { userId: b } } },
+              { participants: { every: { userId: { in: [a, b] } } } },
+            ],
+          },
+          select: { id: true },
+        });
+
+        if (existing) {
+          throw new Error(
+            "There’s already a rated match pending between these two players. Finish or cancel it before creating another."
+          );
+        }
+      }
 
       let creatorExists = false;
       if (creatorId) {
@@ -191,6 +214,9 @@ export async function createMatch(
     return match;
   } catch (err) {
     console.error("createMatch failed:", err);
+    if (err instanceof Error && err.message) {
+      throw err;
+    }
     throw new Error("Failed to create match. Please try again.");
   }
 }
