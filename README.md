@@ -1,47 +1,73 @@
 # TODO
 
-\*\* Match enhancements
-[] Track creator of a match (for banning purposes)
+### Match enhancements
 
-\*\* ELO
-[] Create ELO algorithm
-[] Set elo on User db
-[] On match Completed, update ELO
-[] Add ELO changes (up/down) next to participant names (color coded)
+[ ] Track creator of a match (for banning purposes)
 
-\*\* Reports + context menu introduction
-[] Create Report model
-[] Add CRUD for Reports
-[] Add context menu (right-click) on match with Report option + comment
+### ELO
 
-\*\* Admin features
-[] Add admin page
-[] View reports
-[] Add Delete/Edit context options on matches
-[] Ban users (Perma = deletes all the user's matches + elo resets for ev1)
+[ ] Create ELO algorithm
 
-\*\* Rankings
-[] Create a chessbase style like table of rankings with latest elo changes
+[ ] Set elo on User db
 
-\*\* Comments
-[] Add "Open comments" under each match
-[] Pops in (instagram style)
-[] Paginated + infinite load comments
+[ ] On match Completed, update ELO
 
-\*\* Annoucements
-[] Add annoucements db table
-[] Add annoucements page
-[] Provide admins a way to create/edit/delete annoucements
+[ ] Add ELO changes (up/down) next to participant names (color coded)
 
-\*\* Home page
-[] Recent annoucements
-[] Recent matches
-[] Recent ELO changes
+### Reports + context menu introduction
 
-\*\* Socials
-[] Profile pages for players
-[] Sharing profiles/matches to socials
+[ ] Create Report model
 
-\*\* Guilds
-[] Allow admins to create/edit/delete guilds
-[] Allow players to join a guild (shows on their profiles)
+[ ] Add CRUD for Reports
+
+[ ] Add context menu (right-click) on match with Report option + comment
+
+### Admin features
+
+[ ] Add admin page
+
+[ ] View reports
+
+[ ] Add Delete/Edit context options on matches
+
+[ ] Ban users (Perma = deletes all the user's matches + elo resets for ev1)
+
+### Rankings
+
+[ ] Create a chessbase style like table of rankings with latest elo changes
+
+### Comments
+
+[ ] Add "Open comments" under each match
+
+[ ] Pops in (instagram style)
+
+[ ] Paginated + infinite load comments
+
+### Annoucements
+
+[ ] Add annoucements db table
+
+[ ] Add annoucements page
+
+[ ] Provide admins a way to create/edit/delete annoucements
+
+### Home page
+
+[ ] Recent annoucements
+
+[ ] Recent matches
+
+[ ] Recent ELO changes
+
+### Socials
+
+[ ] Profile pages for players
+
+[ ] Sharing profiles/matches to socials
+
+### Guilds
+
+[ ] Allow admins to create/edit/delete guilds
+
+[ ] Allow players to join a guild (shows on their profiles)
