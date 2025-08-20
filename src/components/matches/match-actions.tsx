@@ -11,13 +11,22 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { MoreVertical, Pencil, Share2, XCircle, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Pencil,
+  Share2,
+  XCircle,
+  Trash2,
+  Flag,
+} from "lucide-react";
 import type { MatchStatus } from "@prisma/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { MatchWithParticipants } from "@/types/prisma-includes";
 import CreateEditMatchDialog from "./create-edit-match-dialog";
 import { useDeleteMatchMutation } from "@/hooks/use-matches";
 import MatchCancelDeleteDialog from "./match-cancel-delete-dialog";
+import MatchReportDialog from "./match-report-dialog";
+import { useCreateReport } from "@/hooks/use-reports";
 
 type Props = {
   matchId: string;
@@ -43,6 +52,7 @@ export default function MatchActions({
   const canCancel = isActive && (isCreator || isAdmin);
   const canDelete = !!isAdmin;
   const canShare = true;
+  const canReport = !!user;
 
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [openEdit, setOpenEdit] = React.useState(false);
@@ -52,7 +62,10 @@ export default function MatchActions({
     "cancel"
   );
 
+  const [openReport, setOpenReport] = React.useState(false);
+
   const deleteMutation = useDeleteMatchMutation();
+  const createReport = useCreateReport();
 
   const onEdit = () => {
     setMenuOpen(false);
@@ -97,6 +110,11 @@ export default function MatchActions({
     } catch {}
   };
 
+  const onReport = () => {
+    setMenuOpen(false);
+    setOpenReport(true);
+  };
+
   return (
     <>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -105,13 +123,13 @@ export default function MatchActions({
             variant="ghost"
             size="icon"
             aria-label="More"
-            disabled={deleteMutation.isPending}
+            disabled={deleteMutation.isPending || createReport.isPending}
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
           {canEdit && (
@@ -134,6 +152,16 @@ export default function MatchActions({
             <DropdownMenuItem onClick={onShare}>
               <Share2 className="mr-2 h-4 w-4" />
               Share
+            </DropdownMenuItem>
+          )}
+
+          {canReport && (
+            <DropdownMenuItem
+              onClick={onReport}
+              disabled={createReport.isPending}
+            >
+              <Flag className="mr-2 h-4 w-4" />
+              {createReport.isPending ? "Reporting…" : "Report"}
             </DropdownMenuItem>
           )}
 
@@ -162,13 +190,32 @@ export default function MatchActions({
         />
       )}
 
-      {/* Shared confirmation dialog for Cancel/Delete */}
+      {/* Cancel/Delete confirmation */}
       <MatchCancelDeleteDialog
         open={confirmOpen}
         mode={confirmMode}
         onClose={() => setConfirmOpen(false)}
         onConfirm={onConfirm}
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Report dialog */}
+      <MatchReportDialog
+        open={openReport}
+        onClose={() => setOpenReport(false)}
+        matchId={matchId}
+        isSubmitting={createReport.isPending}
+        onSubmit={async (values) => {
+          try {
+            await createReport.mutateAsync(values);
+            toast.success("Report submitted");
+            setOpenReport(false);
+          } catch (e) {
+            toast.error(
+              e instanceof Error ? e.message : "Failed to submit report"
+            );
+          }
+        }}
       />
     </>
   );

@@ -81,3 +81,10 @@ export const createMatchSchema = z
   });
 
 export type CreateMatchValues = z.infer<typeof createMatchSchema>;
+
+export const createReportSchema = z.object({
+  matchId: z.cuid(),
+  message: z.string().max(2000).optional(),
+});
+
+export type CreateReportValues = z.infer<typeof createReportSchema>;

@@ -24,6 +24,12 @@ enum MatchStatus {
   COMPLETED
 }
 
+enum ReportStatus {
+  PENDING
+  CLOSED
+  COMPLETED
+}
+
 // ========================================
 // AUTHENTICATION MODELS (NextAuth.js)
 // ========================================
@@ -88,6 +94,7 @@ model User {
   matches        MatchParticipant[]
   matchesWon     Match[]            @relation("MatchWinner")
   createdMatches Match[]            @relation("MatchCreator")
+  createdReports Report[]           @relation("ReportCreator")
 
   @@map("users")
 }
@@ -136,6 +143,33 @@ model Match {
   ratingAppliedAt  DateTime?
   ratingRevertedAt DateTime?
 
+  reports      Report[]
+  reportsCount Int      @default(0)
+
   @@index([winnerId])
   @@index([createdAt, id])
+  @@index([reportsCount])
+}
+
+// ========================================
+// REPORT
+// ========================================
+model Report {
+  id     String       @id @default(cuid())
+  status ReportStatus @default(PENDING)
+
+  createdBy   User   @relation("ReportCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId String
+
+  message String? @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt
+
+  @@unique([matchId, createdById])
+  @@index([matchId])
+  @@index([status])
 }
