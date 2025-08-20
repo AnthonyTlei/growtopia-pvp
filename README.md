@@ -32,8 +32,6 @@
 
 [X] Cancel match (if PENDING and creator)
 
-[ ] Share Match
-
 ### Reports + context menu introduction
 
 [ ] Create Report model
