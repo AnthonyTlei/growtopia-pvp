@@ -14,10 +14,15 @@ import MatchActions from "./match-actions";
 
 interface MatchCardProps {
   match: MatchWithParticipants;
+  hideActionButton?: boolean;
   className?: string;
 }
 
-export default function MatchCard({ match, className }: MatchCardProps) {
+export default function MatchCard({
+  match,
+  className,
+  hideActionButton = false,
+}: MatchCardProps) {
   const participants = match.participants ?? [];
   if (participants.length !== 2) {
     return (
@@ -109,12 +114,14 @@ export default function MatchCard({ match, className }: MatchCardProps) {
             </div>
 
             {/* Actions on far right even on XS */}
-            <MatchActions
-              matchId={match.id}
-              createdById={match.createdById}
-              status={match.status}
-              initialMatch={match}
-            />
+            {!hideActionButton && (
+              <MatchActions
+                matchId={match.id}
+                createdById={match.createdById}
+                status={match.status}
+                initialMatch={match}
+              />
+            )}
           </div>
         </div>
       </CardHeader>
@@ -269,7 +276,7 @@ function PlayerCell({
   image,
   align = "left",
   highlight,
-  size = "md", // ⬅ new
+  size = "md",
 }: {
   ign?: string | null;
   image?: string | null;
@@ -278,38 +285,34 @@ function PlayerCell({
   size?: "xs" | "md";
 }) {
   const initials = (ign ?? "?").slice(0, 2).toUpperCase();
-  const avatarSize = size === "xs" ? "h-6 w-6" : "h-7 w-7"; // ⬅ xs smaller
-  const nameCls = size === "xs" ? "text-[13px]" : "text-sm"; // ⬅ xs smaller
+  const avatarSize = size === "xs" ? "h-6 w-6" : "h-7 w-7";
+  const nameCls = size === "xs" ? "text-[12px]" : "text-sm";
 
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 sm:gap-2", // ⬅ tighter on xs
-        align === "right" && "justify-end text-right"
+        // default flex-col on xs, row on sm+
+        "flex flex-col items-center text-center gap-0.5 sm:flex-row sm:gap-2",
+        align === "right" && "sm:justify-end sm:text-right"
       )}
     >
-      {align === "left" && (
-        <Avatar className={avatarSize}>
-          <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
-          <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
-        </Avatar>
-      )}
+      {/* Avatar (always shown above on xs, inline on sm+) */}
+      <Avatar className={avatarSize}>
+        <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
+        <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
+      </Avatar>
+
+      {/* Name */}
       <div
         className={cn(
           nameCls,
-          "truncate max-w-[7.5rem] sm:max-w-none", // ⬅ prevent overflow on xs
+          "truncate max-w-[5.5rem] sm:max-w-none",
           highlight ? "font-semibold" : "text-muted-foreground"
         )}
         title={ign ?? undefined}
       >
         {ign ?? "Unknown"}
       </div>
-      {align === "right" && (
-        <Avatar className={avatarSize}>
-          <AvatarImage src={image ?? undefined} alt={ign ?? "player"} />
-          <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
-        </Avatar>
-      )}
     </div>
   );
 }

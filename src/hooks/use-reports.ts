@@ -9,7 +9,7 @@ import {
   useQueryClient,
   QueryClient,
 } from "@tanstack/react-query";
-import type { ReportWithRelations } from "@/lib/reports";
+import { ReportWithRelations } from "@/types/prisma-includes";
 
 /** Single source of truth for the list key */
 const REPORTS_KEY = ["reports", "list"] as const;

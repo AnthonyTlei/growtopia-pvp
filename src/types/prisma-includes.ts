@@ -25,7 +25,25 @@ export const matchesWithParticipants = {
   },
 } satisfies Prisma.MatchInclude;
 
-// Types
 export type MatchWithParticipants = Prisma.MatchGetPayload<{
   include: typeof matchesWithParticipants;
+}>;
+
+export const reportsWithRelations = {
+  match: {
+    include: matchesWithParticipants,
+  },
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      ign: true,
+      image: true,
+    },
+  },
+} satisfies Prisma.ReportInclude;
+
+export type ReportWithRelations = Prisma.ReportGetPayload<{
+  include: typeof reportsWithRelations;
 }>;

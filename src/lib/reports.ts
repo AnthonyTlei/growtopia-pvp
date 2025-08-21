@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, ReportStatus, Role } from "@prisma/client";
 import { deleteMatch } from "@/lib/matches";
+import { reportsWithRelations } from "@/types/prisma-includes";
 
 /** ---------- Types ---------- */
 export type CreateReportArgs = {
@@ -20,10 +21,6 @@ export type AcceptReportArgs = {
   actorId: string;
   actorRole: Role;
 };
-
-export type ReportWithRelations = Awaited<
-  ReturnType<typeof listReportsForUser>
->[number];
 
 /** ---------- Helpers ---------- */
 function assertAdminOrOwner(role: Role) {
@@ -46,10 +43,7 @@ export async function listReportsForUser(actor: { id: string; role: Role }) {
   const reports = await prisma.report.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: {
-      match: true,
-      createdBy: true,
-    },
+    include: reportsWithRelations,
   });
 
   return reports;
