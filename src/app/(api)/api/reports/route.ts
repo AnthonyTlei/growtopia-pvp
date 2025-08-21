@@ -6,7 +6,7 @@ import { ZodError } from "zod";
 
 export async function GET() {
   const user = await getUser();
-  if (!user) {
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const user = await getUser();
-  if (!user) {
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 

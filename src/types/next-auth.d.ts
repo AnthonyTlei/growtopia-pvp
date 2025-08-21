@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import NextAuth from "next-auth";
-
 import { Role } from "@prisma/client";
 
 declare module "next-auth" {
@@ -11,6 +8,14 @@ declare module "next-auth" {
     acceptedTerms: boolean;
     elo: number;
     ratedMatchesCount: number;
+
+    ban?: {
+      id: string;
+      userId: string;
+      bannedById: string;
+      createdAt: Date;
+      reason: string | null;
+    } | null;
   }
 
   interface Session {
@@ -24,6 +29,14 @@ declare module "next-auth" {
       acceptedTerms: boolean;
       elo: number;
       ratedMatchesCount: number;
+
+      ban?: {
+        id: string;
+        userId: string;
+        bannedById: string;
+        createdAt: Date;
+        reason: string | null;
+      } | null;
     };
   }
 }

@@ -8,6 +8,7 @@ import TermsAndConditionsWrapper from "@/components/account-setup/terms-and-cond
 import IgnPromptWrapper from "@/components/account-setup/ign-prompt-wrapper";
 import { Toaster } from "@/components/ui/sonner";
 import ReactQueryProvider from "@/providers/react-query-provider";
+import BannedDialog from "@/components/utilities/banned-dialog";
 
 const robotoSans = Roboto({
   weight: ["400", "500", "700"],
@@ -44,6 +45,7 @@ export default async function RootLayout({
               {children}
               {user && !user.acceptedTerms && <TermsAndConditionsWrapper />}
               {user && user.acceptedTerms && !user.ign && <IgnPromptWrapper />}
+              <BannedDialog ban={user?.ban ?? null} />
             </div>
           </ThemeProvider>
           <Toaster />

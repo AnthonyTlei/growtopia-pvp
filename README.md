@@ -42,11 +42,17 @@
 
 [X] Report page (role based)
 
-### Admin features
+### Ban
 
-[ ] Add users page
+[X] Ban schema
 
-[ ] Ban users (Perma = deletes all the user's matches + elo resets for ev1)
+[X] Ban lib crud
+
+[X] Ban API lock
+
+[X] Users page + Ban/Unban actions for Admin/owner
+
+[X] Ban popup on layout
 
 ### Rankings
 

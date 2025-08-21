@@ -96,6 +96,9 @@ model User {
   createdMatches Match[]            @relation("MatchCreator")
   createdReports Report[]           @relation("ReportCreator")
 
+  ban        Ban?  @relation("UserBan")
+  bansIssued Ban[] @relation("BanActor")
+
   @@map("users")
 }
 
@@ -172,4 +175,23 @@ model Report {
   @@unique([matchId, createdById])
   @@index([matchId])
   @@index([status])
+}
+
+// ========================================
+// BAN (one row per banned user)
+// ========================================
+model Ban {
+  id String @id @default(cuid())
+
+  user   User   @relation("UserBan", fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  bannedBy   User   @relation("BanActor", fields: [bannedById], references: [id], onDelete: Cascade)
+  bannedById String
+
+  reason    String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([bannedById])
+  @@index([createdAt])
 }

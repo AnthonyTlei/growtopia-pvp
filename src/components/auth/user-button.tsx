@@ -12,7 +12,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
-import { LogOut, User as UserIcon, Flag } from "lucide-react";
+import { LogOut, User as UserIcon, Flag, Users } from "lucide-react";
 
 export default async function UserButton() {
   const user = await getUser();
@@ -74,6 +74,12 @@ export default async function UserButton() {
                 <Link href="/profile" className="flex items-center">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="text-sm py-2">
+                <Link href="/players" className="flex items-center">
+                  <Users className="mr-2 h-4 w-4" />
+                  Players
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="text-sm py-2">

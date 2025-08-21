@@ -9,7 +9,7 @@ type RouteContext = { params: { id: string } };
 
 export async function PATCH(req: Request, { params }: RouteContext) {
   const user = await getUser();
-  if (!user) {
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,7 +48,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
 
 export async function DELETE(_req: Request, { params }: RouteContext) {
   const user = await getUser();
-  if (!user) {
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 

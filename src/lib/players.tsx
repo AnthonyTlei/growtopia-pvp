@@ -7,6 +7,7 @@ export async function getPlayers() {
         id: true,
         ign: true,
         image: true,
+        ban: true,
       },
     });
     return players;

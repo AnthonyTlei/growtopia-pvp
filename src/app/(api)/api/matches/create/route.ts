@@ -7,7 +7,8 @@ import { ZodError } from "zod";
 
 export async function POST(req: Request) {
   const user = await getUser();
-  if (!user) {
+  console.log(user);
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 

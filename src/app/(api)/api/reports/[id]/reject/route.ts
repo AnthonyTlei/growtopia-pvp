@@ -6,7 +6,7 @@ type RouteContext = { params: { id: string } };
 
 export async function POST(_req: Request, { params }: RouteContext) {
   const user = await getUser();
-  if (!user) {
+  if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
