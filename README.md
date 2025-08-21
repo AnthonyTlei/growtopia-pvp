@@ -34,19 +34,17 @@
 
 ### Reports + context menu introduction
 
-[ ] Create Report model
+[X] Create Report model
 
-[ ] Add CRUD for Reports
+[X] Add CRUD for Reports
 
-[ ] Report action
+[X] Report action
+
+[X] Report page (role based)
 
 ### Admin features
 
-[ ] Add admin page
-
-[ ] View reports
-
-[ ] Add Delete/Edit context options on matches
+[ ] Add users page
 
 [ ] Ban users (Perma = deletes all the user's matches + elo resets for ev1)
 
