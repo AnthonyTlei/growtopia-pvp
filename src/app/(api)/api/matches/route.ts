@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
     const order = orderParam === "asc" ? "asc" : "desc";
 
     const data = await getMatchesInfinite({ cursorId, limit, order });
+
+     console.log("Matches returned from DB:", data);
     return NextResponse.json(data);
   } catch (error: unknown) {
     console.error("GET /matches error:", error);
