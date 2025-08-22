@@ -34,7 +34,7 @@ export default async function Navbar() {
               Matches
             </span>
           </Link>
-          <Link href={`/`}>
+          <Link href={`/rankings`}>
             <span className="text-sm md:text-base font-light hover:text-primary/75">
               Rankings
             </span>
