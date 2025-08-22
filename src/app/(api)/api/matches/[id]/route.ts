@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getUser } from "@/lib/auth-utils";
 import { createMatchSchema, type CreateMatchValues } from "@/lib/validation";
-import { updateMatch } from "@/lib/matches";
-import { deleteMatch } from "@/lib/matches";
+import { updateMatch, deleteMatch } from "@/lib/matches";
 
-type RouteContext = { params: { id: string } };
-
-export async function PATCH(req: Request, { params }: RouteContext) {
+export async function PATCH(req: Request, ctx: any) {
   const user = await getUser();
   if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const id = ctx?.params?.id as string | undefined;
+  if (!id) {
+    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
   }
 
   try {
@@ -18,7 +20,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     const values = createMatchSchema.parse(raw) as CreateMatchValues;
 
     const updated = await updateMatch({
-      id: params.id,
+      id,
       values,
       actorId: user.id,
       actorRole: user.role,
@@ -34,11 +36,9 @@ export async function PATCH(req: Request, { params }: RouteContext) {
         { status: 400 }
       );
     }
-
     if (error instanceof Error) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
-
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }
@@ -46,15 +46,20 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
+export async function DELETE(_req: Request, ctx: any) {
   const user = await getUser();
   if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const id = ctx?.params?.id as string | undefined;
+  if (!id) {
+    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
+  }
+
   try {
     const result = await deleteMatch({
-      id: params.id,
+      id,
       actorId: user.id,
       actorRole: user.role,
     });
@@ -62,11 +67,9 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ id: result.id }, { status: 200 });
   } catch (error) {
     console.error("DELETE /api/matches/[id] failed:", error);
-
     if (error instanceof Error) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
-
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

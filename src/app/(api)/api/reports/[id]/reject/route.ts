@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth-utils";
 import { rejectReport } from "@/lib/reports";
 
-type RouteContext = { params: { id: string } };
+export async function POST(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
 
-export async function POST(_req: Request, { params }: RouteContext) {
   const user = await getUser();
   if (!user || user.ban) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
